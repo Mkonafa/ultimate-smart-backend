@@ -7,11 +7,17 @@ async function bootstrap() {
   // Initialize Firebase Admin
   const serviceAccountPath = path.resolve(__dirname, '../../service-account.json');
   try {
-    admin.initializeApp({
-      credential: admin.credential.cert(require(serviceAccountPath)),
-    });
+    const fs = require('fs');
+    if (fs.existsSync(serviceAccountPath)) {
+      const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+      });
+    } else {
+      console.warn('⚠️ Firebase credentials not found (service-account.json). Push Notifications disabled on Cloud.');
+    }
   } catch (e) {
-    console.warn('⚠️ Firebase credentials not found (service-account.json). Push Notifications will be disabled on Cloud unless env vars are provided.');
+    console.warn('⚠️ Error initializing Firebase:', e.message);
   }
 
   const app = await NestFactory.create(AppModule);
