@@ -15,6 +15,12 @@ export class AuthService {
 
   async validateUser(identifier: string, pass: string, tenantCode: string, deviceId?: string): Promise<any> {
     if (!tenantCode) {
+      const superAdmin = await this.usersService.findSuperAdminByIdentifier(identifier);
+      if (superAdmin && superAdmin.password && await bcrypt.compare(pass, superAdmin.password)) {
+        const { password, ...result } = superAdmin;
+        (result as any).loggedInAs = UserRole.SUPER_ADMIN;
+        return result;
+      }
       throw new BadRequestException('يجب إدخال كود المؤسسة');
     }
 

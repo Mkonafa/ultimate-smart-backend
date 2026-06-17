@@ -1,14 +1,39 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from './entities/user.entity';
+import { User, UserRole } from './entities/user.entity';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
-export class UsersService {
+export class UsersService implements OnModuleInit {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
   ) {}
+
+  async onModuleInit() {
+    const superAdminExists = await this.usersRepository.findOne({ where: { role: UserRole.SUPER_ADMIN } });
+    if (!superAdminExists) {
+      const hashedPassword = await bcrypt.hash('123456', 10);
+      await this.usersRepository.save(this.usersRepository.create({
+        email: 'admin@system.com',
+        password: hashedPassword,
+        role: UserRole.SUPER_ADMIN,
+        fullName: 'مدير النظام الأساسي',
+      }));
+      console.log('✅ Super Admin account created: admin@system.com / 123456');
+    }
+  }
+
+  async findSuperAdminByIdentifier(identifier: string): Promise<User | null> {
+    return this.usersRepository.findOne({
+      where: [
+        { email: identifier, role: UserRole.SUPER_ADMIN },
+        { phone: identifier, role: UserRole.SUPER_ADMIN },
+        { adminCode: identifier, role: UserRole.SUPER_ADMIN },
+      ],
+    });
+  }
 
   async findByEmailAndTenant(email: string, tenantId: string): Promise<User | null> {
     return this.usersRepository.findOne({ where: { email, tenantId } });
