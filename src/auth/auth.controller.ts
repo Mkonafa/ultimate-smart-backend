@@ -8,9 +8,9 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Post('login')
   async login(@Body() loginDto: any) {
-    console.log('[AuthController] 🔑 Login request received:', loginDto.identifier);
+    console.log('[AuthController] 🔑 Login request received:', loginDto.identifier, 'Tenant:', loginDto.tenantCode);
     try {
-      const user = await this.authService.validateUser(loginDto.identifier, loginDto.password, loginDto.deviceId);
+      const user = await this.authService.validateUser(loginDto.identifier, loginDto.password, loginDto.tenantCode, loginDto.deviceId);
       console.log('[AuthController] 👤 User validation result:', user ? `Success` : 'Failed');
       if (!user) {
         throw new UnauthorizedException('Invalid credentials');
@@ -24,18 +24,7 @@ export class AuthController {
     }
   }
 
-  @Post('google')
-  async googleLogin(@Body('idToken') idToken: string) {
-    console.log('[AuthController] 🌐 Google login request received');
-    try {
-      const result = await this.authService.googleLogin(idToken);
-      console.log('[AuthController] ✅ Google login succeeded');
-      return result;
-    } catch (err: any) {
-      console.error('[AuthController] ❌ Google login error:', err.message || err);
-      throw err;
-    }
-  }
+
 
   @Post('register')
   async register(@Body() registerDto: any) {

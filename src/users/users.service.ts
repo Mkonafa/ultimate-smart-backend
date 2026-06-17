@@ -10,19 +10,19 @@ export class UsersService {
     private usersRepository: Repository<User>,
   ) {}
 
-  async findByEmail(email: string): Promise<User | null> {
-    return this.usersRepository.findOne({ where: { email } });
+  async findByEmailAndTenant(email: string, tenantId: string): Promise<User | null> {
+    return this.usersRepository.findOne({ where: { email, tenantId } });
   }
 
-  async findByIdentifier(identifier: string): Promise<User | null> {
+  async findByIdentifierAndTenant(identifier: string, tenantId: string): Promise<User | null> {
     return this.usersRepository.findOne({
       where: [
-        { email: identifier },
-        { nationalId: identifier },
-        { adminCode: identifier },
-        { teacherCode: identifier },
-        { studentCode: identifier },
-        { parentCode: identifier }
+        { email: identifier, tenantId },
+        { nationalId: identifier, tenantId },
+        { adminCode: identifier, tenantId },
+        { teacherCode: identifier, tenantId },
+        { studentCode: identifier, tenantId },
+        { parentCode: identifier, tenantId }
       ],
       relations: { tenant: true },
     });

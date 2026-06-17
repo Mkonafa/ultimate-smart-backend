@@ -17,7 +17,7 @@ export class User {
   @Column({ nullable: true })
   email: string;
 
-  @Column({ unique: true, nullable: true })
+  @Column({ nullable: true })
   phone: string;
 
   @Column({ nullable: true })
@@ -36,13 +36,13 @@ export class User {
   role: string;
 
   // --- Auth Codes & Security ---
-  @Column({ unique: true, nullable: true })
+  @Column({ nullable: true })
   nationalId: string; // Used for Student login
 
-  @Column({ unique: true, nullable: true })
+  @Column({ nullable: true })
   adminCode: string; // Used for Center Admin login
 
-  @Column({ unique: true, nullable: true })
+  @Column({ nullable: true })
   teacherCode: string; // Used for Teacher login
 
   @Column({ nullable: true })
@@ -53,10 +53,10 @@ export class User {
   @Column({ nullable: true })
   fullName: string;
 
-  @Column({ unique: true, nullable: true })
+  @Column({ nullable: true })
   studentCode: string; // The generated code for QR (not necessarily login anymore, but can be)
 
-  @Column({ unique: true, nullable: true })
+  @Column({ nullable: true })
   parentCode: string; // The generated code for parent login
 
   @Column({ nullable: true })

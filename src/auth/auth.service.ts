@@ -1,22 +1,29 @@
 import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
+import { TenantsService } from '../tenants/tenants.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { User, UserRole } from '../users/entities/user.entity';
-import { OAuth2Client } from 'google-auth-library';
-
-const CLIENT_ID = '528031984893-slk81iqeoevot2ffoqpdp1rngcg0e2p3.apps.googleusercontent.com';
-const client = new OAuth2Client(CLIENT_ID);
 
 @Injectable()
 export class AuthService {
   constructor(
     private usersService: UsersService,
+    private tenantsService: TenantsService,
     private jwtService: JwtService
   ) {}
 
-  async validateUser(identifier: string, pass: string, deviceId?: string): Promise<any> {
-    const user = await this.usersService.findByIdentifier(identifier);
+  async validateUser(identifier: string, pass: string, tenantCode: string, deviceId?: string): Promise<any> {
+    if (!tenantCode) {
+      throw new BadRequestException('يجب إدخال كود المؤسسة');
+    }
+
+    const tenant = await this.tenantsService.findByCode(tenantCode);
+    if (!tenant) {
+      throw new UnauthorizedException('كود المؤسسة غير صحيح');
+    }
+
+    const user = await this.usersService.findByIdentifierAndTenant(identifier, tenant.id);
     if (user && user.password && await bcrypt.compare(pass, user.password)) {
       
       // --- SaaS Subscription Check ---
@@ -76,9 +83,11 @@ export class AuthService {
   }
 
   async register(userData: any) {
-    const existingUser = await this.usersService.findByEmail(userData.email);
-    if (existingUser) {
-      throw new BadRequestException('User already exists');
+    if (userData.email && userData.tenantId) {
+      const existingUser = await this.usersService.findByEmailAndTenant(userData.email, userData.tenantId);
+      if (existingUser) {
+        throw new BadRequestException('User already exists in this institution');
+      }
     }
     const hashedPassword = await bcrypt.hash(userData.password, 10);
     
@@ -100,42 +109,5 @@ export class AuthService {
     return result;
   }
 
-  async googleLogin(idToken: string) {
-    try {
-      let payload;
-      try {
-        const ticket = await client.verifyIdToken({
-            idToken: idToken,
-            audience: CLIENT_ID,
-        });
-        payload = ticket.getPayload();
-      } catch (err: any) {
-        console.warn('⚠️ Google cryptographic verification failed. Falling back to local decoding for development:', err.message);
-        const parts = idToken.split('.');
-        if (parts.length === 3) {
-          const payloadJson = Buffer.from(parts[1], 'base64').toString('utf8');
-          payload = JSON.parse(payloadJson);
-        } else {
-          throw err;
-        }
-      }
 
-      if (!payload || !payload.email) throw new UnauthorizedException('Invalid Google Token');
-      
-      let user = await this.usersService.findByEmail(payload.email);
-      if (!user) {
-        // إنشاء مستخدم جديد إذا لم يكن موجوداً
-        user = await this.usersService.create({
-          email: payload.email,
-          provider: 'google',
-          googleId: payload.sub,
-          role: UserRole.STUDENT, // الدور الافتراضي
-        });
-      }
-      return this.login(user);
-    } catch (error) {
-      console.error('Google verification error:', error);
-      throw new UnauthorizedException('فشل التحقق من حساب جوجل');
-    }
-  }
 }

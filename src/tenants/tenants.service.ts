@@ -15,6 +15,10 @@ export class TenantsService {
     return this.tenantsRepository.save(tenant);
   }
 
+  async findByCode(code: string): Promise<Tenant | null> {
+    return this.tenantsRepository.findOne({ where: { code } });
+  }
+
   async findAll(): Promise<Tenant[]> {
     return this.tenantsRepository.find({
       order: { createdAt: 'DESC' },

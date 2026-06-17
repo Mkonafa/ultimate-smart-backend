@@ -9,6 +9,15 @@ export class Tenant {
   @Column()
   name: string;
 
+  @Column({ unique: true, nullable: true })
+  code: string; // Institution Code
+
+  @Column({ nullable: true })
+  ownerName: string;
+
+  @Column('simple-array', { nullable: true })
+  subjectsProvided: string[];
+
   @Column({ nullable: true, unique: true })
   domain: string;
 
