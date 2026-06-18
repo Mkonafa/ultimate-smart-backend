@@ -7,6 +7,14 @@ services:
     startCommand: npm run start:prod
     envVars:
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: ultimate-db
+          property: connectionString
       - key: PORT
         value: 3000
+
+databases:
+  - name: ultimate-db
+    plan: free
+    databaseName: ultimatedb
+    user: ultimateuser
