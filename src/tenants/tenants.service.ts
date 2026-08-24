@@ -12,14 +12,18 @@ export class TenantsService implements OnModuleInit {
 
   async onModuleInit() {
     try {
-      await this.tenantsRepository
-        .createQueryBuilder()
-        .update(Tenant)
-        .set({ name: 'مركز علم' })
-        .where('name LIKE :oldName', { oldName: '%النجاح%' })
-        .execute();
+      let defaultTenant = await this.tenantsRepository.findOne({ where: { code: 'C001' } });
+      if (!defaultTenant) {
+        defaultTenant = await this.tenantsRepository.save(this.tenantsRepository.create({
+          name: 'مركز علم التعليمي',
+          code: 'C001',
+          domain: 'center1.com',
+          isActive: true,
+        }));
+        console.log('✅ Default Tenant created: مركز علم التعليمي (C001)');
+      }
     } catch (e) {
-      console.log('Tenant name auto-update skipped:', e);
+      console.log('Tenant init check skipped:', e);
     }
   }
 
@@ -28,15 +32,23 @@ export class TenantsService implements OnModuleInit {
     return this.tenantsRepository.save(tenant);
   }
 
-  async findByCode(code: string): Promise<Tenant | null> {
-    if (!code) {
-      const all = await this.tenantsRepository.find({ order: { createdAt: 'ASC' } });
-      return all.length > 0 ? all[0] : null;
-    }
-    const found = await this.tenantsRepository.findOne({ where: { code } });
-    if (found) return found;
+  async getOrCreateDefaultTenant(): Promise<Tenant> {
     const all = await this.tenantsRepository.find({ order: { createdAt: 'ASC' } });
-    return all.length > 0 ? all[0] : null;
+    if (all.length > 0) return all[0];
+    return this.tenantsRepository.save(this.tenantsRepository.create({
+      name: 'مركز علم التعليمي',
+      code: 'C001',
+      domain: 'center1.com',
+      isActive: true,
+    }));
+  }
+
+  async findByCode(code?: string): Promise<Tenant> {
+    if (code) {
+      const found = await this.tenantsRepository.findOne({ where: { code } });
+      if (found) return found;
+    }
+    return this.getOrCreateDefaultTenant();
   }
 
   async findAll(): Promise<Tenant[]> {
