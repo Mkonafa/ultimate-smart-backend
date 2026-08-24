@@ -138,6 +138,15 @@ export class User {
   subjectPrice: number; // سعر المادة التعليمية لكل مدرس
 
   @Column({ nullable: true })
+  qualification: string; // المؤهل العلمي للمعلم
+
+  @Column({ nullable: true })
+  secondPhone: string; // الرقم السلكي أو الواتساب الثاني للمعلم
+
+  @Column('json', { nullable: true })
+  subjectGradePrices: any; // تفاصيل أسعار المواد للصفوف للمعلم
+
+  @Column({ nullable: true })
   fcmToken?: string;
 
   @CreateDateColumn()

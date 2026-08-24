@@ -267,9 +267,21 @@ export class UsersService implements OnModuleInit {
     await this.usersRepository.update(userId, { deviceId });
   }
 
-  async create(userData: Partial<User>): Promise<User> {
+  async create(userData: Partial<User> | any): Promise<User> {
     if (userData.password) {
       userData.password = await bcrypt.hash(userData.password, 10);
+    }
+
+    if (!userData.tenantId) {
+      const defaultTenant = await this.tenantRepository.findOne({ where: { code: 'C001' } }) || 
+                             await this.tenantRepository.save(this.tenantRepository.create({
+                               name: 'مركز علم التعليمي',
+                               code: 'C001',
+                               domain: 'center1.com',
+                               isActive: true,
+                             }));
+      userData.tenantId = defaultTenant.id;
+      userData.tenant = defaultTenant;
     }
     
     // Code auto-generation with Stage Signature Prefix
@@ -291,7 +303,11 @@ export class UsersService implements OnModuleInit {
       }
     }
 
-    const user = this.usersRepository.create(userData);
+    if (userData.teacherAddress && !userData.address) {
+      userData.address = userData.teacherAddress;
+    }
+
+    const user = this.usersRepository.create(userData as Partial<User>);
     return this.usersRepository.save(user);
   }
 
