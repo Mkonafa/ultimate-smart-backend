@@ -36,11 +36,11 @@ async function bootstrap() {
   let center = await tenantRepo.findOne({ where: { domain: 'center1.com' } });
   if (!center) {
     center = tenantRepo.create({
-      name: 'أكاديمية النجاح',
+      name: 'مركز علم',
       domain: 'center1.com',
     });
     await tenantRepo.save(center);
-    console.log('✅ Center created: أكاديمية النجاح');
+    console.log('✅ Center created: مركز علم');
   }
 
   // 3. Create a Center Admin
@@ -48,13 +48,14 @@ async function bootstrap() {
   if (!centerAdmin) {
     centerAdmin = userRepo.create({
       email: 'admin@center1.com',
+      adminCode: 'ADMIN01',
       password: hashedPass,
       role: UserRole.CENTER_ADMIN,
       tenant: center,
       tenantId: center.id,
     });
     await userRepo.save(centerAdmin);
-    console.log('✅ Center Admin created: admin@center1.com / 123456');
+    console.log('✅ Center Admin created: ADMIN01 / admin@center1.com / 123456');
   }
 
   // 4. Create a Teacher
@@ -62,6 +63,7 @@ async function bootstrap() {
   if (!teacher) {
     teacher = userRepo.create({
       email: 'teacher@center1.com',
+      teacherCode: 'TCH01',
       password: hashedPass,
       role: UserRole.TEACHER,
       tenant: center,
@@ -69,7 +71,7 @@ async function bootstrap() {
       fullName: 'أ. أحمد علي',
     });
     await userRepo.save(teacher);
-    console.log('✅ Teacher created: teacher@center1.com / 123456');
+    console.log('✅ Teacher created: TCH01 / teacher@center1.com / 123456');
   }
 
   // 4.5. Create a Parent
@@ -77,6 +79,7 @@ async function bootstrap() {
   if (!parentUser) {
     parentUser = userRepo.create({
       email: 'parent@center1.com',
+      parentCode: 'PAR01',
       password: hashedPass,
       role: UserRole.PARENT,
       tenant: center,
@@ -85,7 +88,7 @@ async function bootstrap() {
       phone: '01098765432',
     });
     await userRepo.save(parentUser);
-    console.log('✅ Parent created: parent@center1.com / 123456');
+    console.log('✅ Parent created: PAR01 / parent@center1.com / 123456');
   }
 
   // 5. Create a Student
@@ -105,7 +108,7 @@ async function bootstrap() {
       parentId: parentUser.id,
     });
     await userRepo.save(student);
-    console.log('✅ Student created: student@center1.com / 123456 (Code: 100100)');
+    console.log('✅ Student created: 100100 / student@center1.com / 123456');
   } else if (!student.parentId && parentUser) {
     student.parentId = parentUser.id;
     await userRepo.save(student);

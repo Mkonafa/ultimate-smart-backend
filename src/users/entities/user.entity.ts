@@ -4,6 +4,7 @@ import { Tenant } from '../../tenants/entities/tenant.entity';
 export enum UserRole {
   SUPER_ADMIN = 'SUPER_ADMIN',
   CENTER_ADMIN = 'CENTER_ADMIN',
+  ADMIN_ASSISTANT = 'ADMIN_ASSISTANT',
   TEACHER = 'TEACHER',
   STUDENT = 'STUDENT',
   PARENT = 'PARENT',
@@ -66,7 +67,28 @@ export class User {
   parentPhone: string;
 
   @Column({ nullable: true })
+  fatherPhone: string;
+
+  @Column({ nullable: true })
+  motherPhone: string;
+
+  @Column({ nullable: true })
+  fatherName: string;
+
+  @Column({ nullable: true })
+  motherName: string;
+
+  @Column({ nullable: true })
+  fatherNationalId: string;
+
+  @Column({ nullable: true })
+  motherNationalId: string;
+
+  @Column({ nullable: true })
   address: string;
+
+  @Column({ nullable: true })
+  birthDate: string; // تاريخ الميلاد المستخلص من الرقم القومي
 
   @Column({ default: false })
   isQrEnabled: boolean; // Setting to toggle QR vs Manual per student
@@ -88,6 +110,32 @@ export class User {
 
   @Column({ default: true })
   isActive: boolean;
+
+  @Column({ default: false })
+  isRestricted: boolean; // تقييد دور/نشاط الحساب مستقبلاً
+
+  // --- Admin Assistant Fields ---
+  @Column({ nullable: true })
+  assistantRoleTitle: string; // مسمى الدور المنوط للمساعد
+
+  @Column({ nullable: true })
+  specialty: string; // اختصاص ودور المساعد
+
+  @Column({ nullable: true, type: 'decimal' })
+  monthlySalary: number; // المبلغ الشهري للمساعد
+
+  // --- Teacher Pricing & Admin Percentage Fields ---
+  @Column('simple-array', { nullable: true })
+  teachingStages: string[]; // المراحل التعليمية المسندة للمدرس (مثلاً: ابتدائي، إعدادي، ثانوي)
+
+  @Column('simple-array', { nullable: true })
+  teachingSubjects: string[]; // المواد التعليمية المسندة للمدرس في المراحل
+
+  @Column({ nullable: true, type: 'decimal' })
+  adminRevenueSharePercentage: number; // نسبة الإدارة في قيمة المادة للمدرس
+
+  @Column({ nullable: true, type: 'decimal' })
+  subjectPrice: number; // سعر المادة التعليمية لكل مدرس
 
   @Column({ nullable: true })
   fcmToken?: string;

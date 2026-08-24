@@ -18,7 +18,7 @@ export class Course {
   @JoinColumn({ name: 'tenantId' })
   tenant: Tenant;
 
-  @Column()
+  @Column({ nullable: true })
   subjectId: string;
 
   @ManyToOne(() => Subject)
@@ -34,6 +34,21 @@ export class Course {
 
   @Column({ type: 'decimal', default: 0 })
   price: number;
+
+  @Column({ nullable: true })
+  gradeLevel: string; // e.g., 'الصف الأول الثانوي'
+
+  @Column({ nullable: true })
+  educationLevel: string; // e.g., 'primary', 'middle', 'high', 'university'
+
+  @Column({ type: 'int', default: 8 })
+  sessionsCount: number; // عدد الحصص بالدورة/الشهر
+
+  @Column({ nullable: true })
+  scheduleTiming: string; // توقيت ومواعيد الحصص (e.g., الأحد والأربعاء من 04:00 م إلى 06:00 م)
+
+  @Column({ nullable: true, type: 'decimal' })
+  adminRevenueSharePercentage: number; // نسبة الإدارة المخصصة في هذا الكورس/المادة العلمية
 
   @CreateDateColumn()
   createdAt: Date;

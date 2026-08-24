@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Attendance } from './entities/attendance.entity';
@@ -58,6 +58,57 @@ export class AttendanceService {
       savedRecords.push(await this.attendanceRepo.save(attendance));
     }
     return { success: true, count: savedRecords.length };
+  }
+
+  async scanQrAttendance(code: string, tenantId: string): Promise<any> {
+    const userRepo = this.attendanceRepo.manager.getRepository(User);
+    const student = await userRepo.findOne({
+      where: [
+        { studentCode: code, tenantId },
+        { nationalId: code, tenantId },
+        { id: code, tenantId },
+      ],
+    });
+
+    if (!student) {
+      throw new NotFoundException('الطالب غير مسجل بالمركز أو الكود غير صحيح.');
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const timeStr = new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+
+    let attendance = await this.attendanceRepo.findOne({
+      where: { studentId: student.id, date: todayStr }
+    });
+
+    if (!attendance) {
+      attendance = this.attendanceRepo.create({
+        tenantId,
+        studentId: student.id,
+        date: todayStr,
+        status: 'PRESENT',
+      });
+      await this.attendanceRepo.save(attendance);
+    }
+
+    return {
+      success: true,
+      timestamp: timeStr,
+      student: {
+        id: student.id,
+        fullName: student.fullName,
+        studentCode: student.studentCode,
+        parentPhone: student.parentPhone,
+        phone: student.phone,
+        educationLevel: student.educationLevel,
+        birthDate: student.birthDate,
+      },
+      notifications: {
+        parent: `🔔 تم تسجيل دخول الطالب (${student.fullName}) إلى المركز بنجاح في تمام ${timeStr}.`,
+        teacher: `🎓 انضم الطالب (${student.fullName}) إلى القاعة.`,
+        admin: `✅ حضور معتمد: ${student.fullName} - الكود: ${student.studentCode}`,
+      }
+    };
   }
 
   async findStudentParent(studentId: string): Promise<User | null> {

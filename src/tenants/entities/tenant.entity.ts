@@ -43,10 +43,31 @@ export class Tenant {
   address: string;
 
   @Column({ nullable: true })
+  landlinePhone: string;
+
+  @Column({ nullable: true })
+  mobilePhone: string;
+
+  @Column({ nullable: true })
+  whatsappPhone: string;
+
+  @Column({ nullable: true })
+  logoUrl: string;
+
+  @Column({ nullable: true, type: 'text' })
+  regulations: string;
+
+  @Column({ nullable: true })
   whatsappLink: string;
 
   @Column({ nullable: true })
   facebookLink: string;
+
+  @Column({ nullable: true, type: 'decimal', default: 15 })
+  allSubjectsDiscountPercentage: number; // نسبة الخصم عند الاشتراك في كل المواد (مثلاً 15%)
+
+  @Column({ nullable: true, default: 'عرض الباقة الشاملة: خصم خاص عند تسجيل جميع المواد في المركز 🚀' })
+  allSubjectsDiscountOfferText: string; // نص العرض والخصم للمواد الشاملة
 
   @Column({ nullable: true })
   adminSuspensionReason: string;

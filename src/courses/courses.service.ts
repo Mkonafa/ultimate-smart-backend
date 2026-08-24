@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { Course } from './entities/course.entity';
 import { User } from '../users/entities/user.entity';
 
@@ -16,6 +16,7 @@ export class CoursesService {
     private enrollmentRepo: Repository<CourseEnrollment>,
     @InjectRepository(CourseMaterial)
     private materialRepo: Repository<CourseMaterial>,
+    private dataSource: DataSource,
   ) {}
 
   async create(data: Partial<Course>, tenantId: string): Promise<Course> {
@@ -31,10 +32,56 @@ export class CoursesService {
     });
   }
 
+  async update(id: string, data: Partial<Course>, tenantId: string): Promise<Course> {
+    const course = await this.coursesRepo.findOne({ where: { id, tenantId } });
+    if (!course) throw new NotFoundException('Course not found or access denied');
+    Object.assign(course, data);
+    return this.coursesRepo.save(course);
+  }
+
   async remove(id: string, tenantId: string): Promise<void> {
     const course = await this.coursesRepo.findOne({ where: { id, tenantId } });
     if (!course) throw new NotFoundException('Course not found or access denied');
-    await this.coursesRepo.delete(id);
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    try {
+      await queryRunner.query(`PRAGMA foreign_keys = OFF;`).catch(() => {});
+      await queryRunner.query(`DELETE FROM "course_enrollments" WHERE "courseId" = ? OR "course_id" = ?`, [id, id]).catch(() => {});
+      await queryRunner.query(`DELETE FROM "course_materials" WHERE "courseId" = ? OR "course_id" = ?`, [id, id]).catch(() => {});
+      await queryRunner.query(`DELETE FROM "exam_results" WHERE "examId" IN (SELECT "id" FROM "exams" WHERE "courseId" = ? OR "course_id" = ?)`, [id, id]).catch(() => {});
+      await queryRunner.query(`DELETE FROM "exams" WHERE "courseId" = ? OR "course_id" = ?`, [id, id]).catch(() => {});
+      await queryRunner.query(`DELETE FROM "attendance" WHERE "courseId" = ? OR "course_id" = ?`, [id, id]).catch(() => {});
+      await queryRunner.query(`DELETE FROM "groups" WHERE "courseId" = ? OR "course_id" = ?`, [id, id]).catch(() => {});
+      await queryRunner.query(`DELETE FROM "courses" WHERE "id" = ?`, [id]);
+    } catch (e) {
+      console.log('Cascade remove course error:', e);
+      await this.coursesRepo.delete(id);
+    } finally {
+      await queryRunner.query(`PRAGMA foreign_keys = ON;`).catch(() => {});
+      await queryRunner.release();
+    }
+  }
+
+  async removeAll(tenantId: string): Promise<void> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    try {
+      await queryRunner.query(`PRAGMA foreign_keys = OFF;`).catch(() => {});
+      const courses = await this.coursesRepo.find({ where: { tenantId } });
+      for (const c of courses) {
+        await queryRunner.query(`DELETE FROM "course_enrollments" WHERE "courseId" = ? OR "course_id" = ?`, [c.id, c.id]).catch(() => {});
+        await queryRunner.query(`DELETE FROM "course_materials" WHERE "courseId" = ? OR "course_id" = ?`, [c.id, c.id]).catch(() => {});
+        await queryRunner.query(`DELETE FROM "exam_results" WHERE "examId" IN (SELECT "id" FROM "exams" WHERE "courseId" = ? OR "course_id" = ?)`, [c.id, c.id]).catch(() => {});
+        await queryRunner.query(`DELETE FROM "exams" WHERE "courseId" = ? OR "course_id" = ?`, [c.id, c.id]).catch(() => {});
+        await queryRunner.query(`DELETE FROM "attendance" WHERE "courseId" = ? OR "course_id" = ?`, [c.id, c.id]).catch(() => {});
+        await queryRunner.query(`DELETE FROM "groups" WHERE "courseId" = ? OR "course_id" = ?`, [c.id, c.id]).catch(() => {});
+      }
+      await queryRunner.query(`DELETE FROM "courses" WHERE "tenantId" = ?`, [tenantId]);
+    } catch (e) {
+      console.log('Cascade removeAll courses error:', e);
+    } finally {
+      await queryRunner.query(`PRAGMA foreign_keys = ON;`).catch(() => {});
+      await queryRunner.release();
+    }
   }
 
   async enrollStudent(courseId: string, studentId: string): Promise<CourseEnrollment> {

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -43,9 +43,51 @@ export class UsersController {
   }
 
   @Roles('SUPER_ADMIN', 'CENTER_ADMIN')
-  @Put(':id/toggle-qr')
-  async toggleQr(@Param('id') id: string, @Request() req) {
+  @Put(':id')
+  async updateUser(@Param('id') id: string, @Body() data: any, @Request() req) {
     const tenantId = req.user.tenantId;
-    return this.usersService.toggleQr(id, tenantId);
+    return this.usersService.updateUser(id, tenantId, data);
+  }
+
+  @Roles('SUPER_ADMIN', 'CENTER_ADMIN')
+  @Put(':id/toggle-restriction')
+  async toggleRestriction(@Param('id') id: string, @Request() req) {
+    const tenantId = req.user.tenantId;
+    return this.usersService.toggleRestriction(id, tenantId);
+  }
+
+  @Roles('SUPER_ADMIN', 'CENTER_ADMIN')
+  @Put(':id/toggle-active')
+  async toggleActive(@Param('id') id: string, @Request() req) {
+    const tenantId = req.user.tenantId;
+    return this.usersService.toggleActive(id, tenantId);
+  }
+
+  @Roles('SUPER_ADMIN', 'CENTER_ADMIN')
+  @Put(':id/reset-password')
+  async resetPassword(@Param('id') id: string, @Body('newPassword') newPassword: string, @Request() req) {
+    const tenantId = req.user.tenantId;
+    return this.usersService.resetPassword(id, tenantId, newPassword || '123456');
+  }
+
+  @Roles('SUPER_ADMIN', 'CENTER_ADMIN')
+  @Put(':id/update-code')
+  async updateCode(@Param('id') id: string, @Body('newCode') newCode: string, @Request() req) {
+    const tenantId = req.user.tenantId;
+    return this.usersService.updateUserCode(id, tenantId, newCode);
+  }
+
+  @Roles('SUPER_ADMIN', 'CENTER_ADMIN')
+  @Delete('bulk')
+  async bulkRemove(@Body('ids') ids: string[], @Request() req) {
+    const tenantId = req.user.tenantId;
+    return this.usersService.bulkRemove(ids || [], tenantId);
+  }
+
+  @Roles('SUPER_ADMIN', 'CENTER_ADMIN')
+  @Delete(':id')
+  async removeUser(@Param('id') id: string, @Request() req) {
+    const tenantId = req.user.tenantId;
+    return this.usersService.remove(id, tenantId);
   }
 }

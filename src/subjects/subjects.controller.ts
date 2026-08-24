@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { SubjectsService } from './subjects.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -16,11 +16,25 @@ export class SubjectsController {
     return this.subjectsService.create(data, tenantId);
   }
 
+  @Roles('SUPER_ADMIN', 'CENTER_ADMIN')
+  @Post('bulk')
+  bulkCreate(@Body() data: any, @Request() req) {
+    const tenantId = req.user.tenantId;
+    return this.subjectsService.bulkCreate(data, tenantId);
+  }
+
   @Roles('SUPER_ADMIN', 'CENTER_ADMIN', 'TEACHER', 'STUDENT')
   @Get()
   findAll(@Request() req) {
     const tenantId = req.user.tenantId;
     return this.subjectsService.findAllByTenant(tenantId);
+  }
+
+  @Roles('SUPER_ADMIN', 'CENTER_ADMIN')
+  @Put(':id')
+  update(@Param('id') id: string, @Body() data: any, @Request() req) {
+    const tenantId = req.user.tenantId;
+    return this.subjectsService.update(id, data, tenantId);
   }
 
   @Roles('SUPER_ADMIN', 'CENTER_ADMIN')

@@ -13,25 +13,37 @@ export class AuthService {
     private jwtService: JwtService
   ) {}
 
-  async validateUser(identifier: string, pass: string, tenantCode: string, deviceId?: string): Promise<any> {
-    if (!tenantCode) {
+  async validateUser(identifier: string, pass: string, tenantCode?: string, deviceId?: string): Promise<any> {
+    let user: User | null = null;
+
+    // Search globally by Admin Code, Teacher Code, Student Code, Parent Code, National ID, Email, Phone first
+    user = await this.usersService.findByIdentifierGlobal(identifier);
+
+    if (!user && tenantCode) {
+      const tenant = await this.tenantsService.findByCode(tenantCode);
+      if (tenant) {
+        user = await this.usersService.findByIdentifierAndTenant(identifier, tenant.id);
+      }
+    }
+
+    if (!user) {
       const superAdmin = await this.usersService.findSuperAdminByIdentifier(identifier);
       if (superAdmin && superAdmin.password && await bcrypt.compare(pass, superAdmin.password)) {
         const { password, ...result } = superAdmin;
         (result as any).loggedInAs = UserRole.SUPER_ADMIN;
         return result;
       }
-      throw new BadRequestException('يجب إدخال كود المؤسسة');
+      return null;
     }
 
-    const tenant = await this.tenantsService.findByCode(tenantCode);
-    if (!tenant) {
-      throw new UnauthorizedException('كود المؤسسة غير صحيح');
-    }
-
-    const user = await this.usersService.findByIdentifierAndTenant(identifier, tenant.id);
     if (user && user.password && await bcrypt.compare(pass, user.password)) {
       
+      // --- Account Active Check ---
+      if (user.isActive === false) {
+        throw new UnauthorizedException('تم إيقاف هذا الحساب من قبل الإدارة. يرجى التواصل مع المسؤول.');
+      }
+      // ----------------------------
+
       // --- SaaS Subscription Check ---
       if (user.role !== UserRole.SUPER_ADMIN && user.tenant) {
         if (!user.tenant.isActive) {
@@ -46,16 +58,14 @@ export class AuthService {
         }
         
         // --- Device Binding Check (ربط الجهاز) ---
-        if (user.tenant.hasDeviceBindingFeature && user.tenant.isDeviceBindingEnabled) {
-          if (!deviceId) {
-            throw new UnauthorizedException('يجب توفير معرف الجهاز للتحقق من الأمان.');
-          }
-          if (user.deviceId && user.deviceId !== deviceId) {
+        if (user.role !== UserRole.CENTER_ADMIN && user.role !== UserRole.SUPER_ADMIN && user.tenant.hasDeviceBindingFeature && user.tenant.isDeviceBindingEnabled) {
+          const effectiveDeviceId = deviceId || 'web-browser-device-id';
+          if (user.deviceId && user.deviceId !== effectiveDeviceId) {
             throw new UnauthorizedException('هذا الحساب مرتبط بجهاز آخر. يرجى مراجعة إدارة السنتر لفك الارتباط.');
           }
           if (!user.deviceId) {
-            await this.usersService.updateDeviceId(user.id, deviceId);
-            user.deviceId = deviceId; // Update local instance for subsequent operations
+            await this.usersService.updateDeviceId(user.id, effectiveDeviceId);
+            user.deviceId = effectiveDeviceId; // Update local instance for subsequent operations
           }
         }
         // ------------------------------------------
@@ -88,11 +98,54 @@ export class AuthService {
     };
   }
 
+  parseEgyptianNationalId(nationalId: string): string | null {
+    if (!nationalId || nationalId.length !== 14 || !/^\d{14}$/.test(nationalId)) {
+      return null;
+    }
+    const centuryDigit = parseInt(nationalId[0], 10);
+    let birthYear = parseInt(nationalId.substring(1, 3), 10);
+    if (centuryDigit === 2) {
+      birthYear += 1900;
+    } else if (centuryDigit === 3) {
+      birthYear += 2000;
+    } else {
+      return null;
+    }
+    const birthMonth = nationalId.substring(3, 5);
+    const birthDay = nationalId.substring(5, 7);
+    return `${birthYear}-${birthMonth}-${birthDay}`;
+  }
+
+  generateStudentCode(fullName: string, nationalId: string, phone: string): string {
+    const nameParts = fullName ? fullName.trim().split(/\s+/) : [];
+    let initials = nameParts
+      .map(p => p[0])
+      .join('')
+      .toUpperCase();
+    
+    if (!initials) initials = 'ST';
+    if (initials.length > 3) {
+      initials = initials.substring(0, 3);
+    }
+    
+    const nidPart = nationalId && nationalId.length >= 4 
+      ? nationalId.substring(nationalId.length - 4) 
+      : '0000';
+    
+    const phonePart = phone && phone.length >= 4 
+      ? phone.substring(phone.length - 4) 
+      : '0000';
+      
+    return `${initials}-${nidPart}-${phonePart}`;
+  }
+
   async register(userData: any) {
-    if (userData.email && userData.tenantId) {
-      const existingUser = await this.usersService.findByEmailAndTenant(userData.email, userData.tenantId);
+    if (userData.email) {
+      const existingUser = userData.tenantId
+        ? await this.usersService.findByEmailAndTenant(userData.email, userData.tenantId)
+        : await this.usersService.findByEmail(userData.email);
       if (existingUser) {
-        throw new BadRequestException('User already exists in this institution');
+        throw new BadRequestException('هذا البريد الإلكتروني مستخدم بالفعل. يرجى استخدام بريد إلكتروني آخر أو تسجيل الدخول.');
       }
     }
     const hashedPassword = await bcrypt.hash(userData.password, 10);
@@ -100,9 +153,16 @@ export class AuthService {
     // Generate codes if student
     let generatedCode: string | null = null;
     let generatedParentCode: string | null = null;
+    let extractedBirthDate: string | null = null;
+    
     if (userData.role === UserRole.STUDENT || !userData.role) {
-      generatedCode = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digit code
+      const nationalId = userData.nationalId || '';
+      const phone = userData.phone || userData.parentPhone || '';
+      const fullName = userData.fullName || '';
+      
+      generatedCode = this.generateStudentCode(fullName, nationalId, phone);
       generatedParentCode = 'P' + Math.floor(10000 + Math.random() * 90000).toString(); // P + 5 digit code
+      extractedBirthDate = this.parseEgyptianNationalId(nationalId);
     }
 
     const newUser = await this.usersService.create({
@@ -110,6 +170,7 @@ export class AuthService {
       password: hashedPassword,
       studentCode: generatedCode,
       parentCode: generatedParentCode,
+      birthDate: extractedBirthDate,
     });
     const { password, ...result } = newUser;
     return result;

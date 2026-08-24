@@ -33,4 +33,11 @@ export class AttendanceController {
     const tenantId = req.user.tenantId;
     return this.attendanceService.submitAttendance(body.courseId, body.date, body.records, tenantId);
   }
+
+  @Roles('SUPER_ADMIN', 'CENTER_ADMIN', 'TEACHER')
+  @Post('scan-qr')
+  scanQrAttendance(@Body() body: { code: string }, @Request() req) {
+    const tenantId = req.user.tenantId;
+    return this.attendanceService.scanQrAttendance(body.code, tenantId);
+  }
 }

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { CoursesService } from './courses.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -21,6 +21,20 @@ export class CoursesController {
   findAll(@Request() req) {
     const tenantId = req.user.tenantId;
     return this.coursesService.findAllByTenant(tenantId);
+  }
+
+  @Roles('SUPER_ADMIN', 'CENTER_ADMIN')
+  @Put(':id')
+  update(@Param('id') id: string, @Body() data: any, @Request() req) {
+    const tenantId = req.user.tenantId;
+    return this.coursesService.update(id, data, tenantId);
+  }
+
+  @Roles('SUPER_ADMIN', 'CENTER_ADMIN')
+  @Delete('purge-all')
+  removeAll(@Request() req) {
+    const tenantId = req.user.tenantId;
+    return this.coursesService.removeAll(tenantId);
   }
 
   @Roles('SUPER_ADMIN', 'CENTER_ADMIN')

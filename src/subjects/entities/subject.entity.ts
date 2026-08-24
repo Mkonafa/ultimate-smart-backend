@@ -7,7 +7,13 @@ export class Subject {
   id: string;
 
   @Column()
-  name: string; // e.g., 'Mathematics', 'Physics'
+  name: string; // e.g., 'أحياء', 'فيزياء'
+
+  @Column({ nullable: true })
+  educationLevel: string; // e.g., 'primary', 'middle', 'high', 'university'
+
+  @Column({ nullable: true })
+  gradeLevel: string; // e.g., 'الصف الأول الثانوي'
 
   @Column({ nullable: true })
   description: string;

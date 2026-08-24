@@ -42,6 +42,16 @@ export class CourseEnrollment {
   @Column({ nullable: true })
   expirationDate: Date;
 
+  // --- Student Teacher Lock & Transfer Rule ---
+  @Column({ default: true })
+  isTeacherLocked: boolean; // الطالب مقيد بالمدرس الذي اختاره ولا ينتقل إلا بإذن الإدارة
+
+  @Column({ nullable: true })
+  requestedTeacherId: string; // المعلم الجديد المطلوب الانتقال إليه
+
+  @Column({ default: 'NONE' })
+  transferStatus: string; // 'NONE', 'PENDING_ADMIN_APPROVAL', 'APPROVED', 'REJECTED'
+
   @CreateDateColumn()
   createdAt: Date;
 
