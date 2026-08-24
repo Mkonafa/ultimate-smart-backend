@@ -150,7 +150,9 @@ export class AuthService {
       email: user.email, 
       sub: user.id, 
       role: user.loggedInAs || user.role, 
-      tenantId: user.tenantId || user.tenant?.id 
+      tenantId: user.tenantId || user.tenant?.id,
+      fullName: user.fullName || 'المعلم الفاضل',
+      code: user.teacherCode || user.studentCode || user.adminCode || user.parentCode || 'TCH-01',
     };
     return {
       access_token: this.jwtService.sign(payload),

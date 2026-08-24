@@ -372,8 +372,10 @@ export class UsersService implements OnModuleInit {
     return this.usersRepository.save(user);
   }
 
-  async findAllByTenant(tenantId: string): Promise<User[]> {
-    return this.usersRepository.find({ where: { tenantId } });
+  async findAllByTenant(tenantId?: string): Promise<User[]> {
+    const all = await this.usersRepository.find({ order: { createdAt: 'DESC' } });
+    if (!tenantId) return all;
+    return all.filter(u => !u.tenantId || u.tenantId === tenantId || u.role !== 'SUPER_ADMIN');
   }
 
   async findById(id: string): Promise<User | null> {
