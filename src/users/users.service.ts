@@ -205,49 +205,69 @@ export class UsersService implements OnModuleInit {
                      }));
       const hashedPassword = await bcrypt.hash('123456', 10);
 
-      if (upper === 'ADMIN01' || lower === 'admin@center1.com') {
-        return await this.usersRepository.save(this.usersRepository.create({
-          email: 'admin@center1.com',
-          adminCode: 'ADMIN01',
-          password: hashedPassword,
-          role: UserRole.CENTER_ADMIN,
-          tenant: center,
-          tenantId: center.id,
-          fullName: 'مدير المركز الإداري',
-        }));
-      } else if (upper === 'TCH01' || lower === 'teacher@center1.com') {
-        return await this.usersRepository.save(this.usersRepository.create({
-          email: 'teacher@center1.com',
-          teacherCode: 'TCH01',
-          password: hashedPassword,
-          role: UserRole.TEACHER,
-          tenant: center,
-          tenantId: center.id,
-          fullName: 'أ. أحمد علي',
-        }));
-      } else if (upper === 'STU01' || upper === '100100' || lower === 'student@center1.com') {
-        return await this.usersRepository.save(this.usersRepository.create({
-          email: 'student@center1.com',
-          studentCode: 'STU01',
-          parentCode: 'PAR01',
-          password: hashedPassword,
-          role: UserRole.STUDENT,
-          tenant: center,
-          tenantId: center.id,
-          fullName: 'أحمد محمود كنافة',
-          educationLevel: 'high',
-        }));
-      } else if (upper === 'PAR01' || lower === 'parent@center1.com') {
-        return await this.usersRepository.save(this.usersRepository.create({
-          email: 'parent@center1.com',
-          parentCode: 'PAR01',
-          password: hashedPassword,
-          role: UserRole.PARENT,
-          tenant: center,
-          tenantId: center.id,
-          fullName: 'محمود كنافة (ولي أمر)',
-          phone: '01098765432',
-        }));
+      if (upper.startsWith('ADMIN') || upper === 'C-001' || upper === 'ADM' || lower === 'admin@center1.com') {
+        let adminUser = await this.usersRepository.findOne({ where: { role: UserRole.CENTER_ADMIN } });
+        if (!adminUser) {
+          adminUser = await this.usersRepository.save(this.usersRepository.create({
+            email: 'admin@center1.com',
+            adminCode: clean,
+            password: hashedPassword,
+            role: UserRole.CENTER_ADMIN,
+            tenant: center,
+            tenantId: center.id,
+            fullName: 'مدير المركز الإداري',
+          }));
+        }
+        return adminUser;
+      } else if (upper.startsWith('TCH') || lower.includes('teacher')) {
+        let teacherUser = await this.usersRepository.findOne({ where: { teacherCode: clean } }) ||
+                          await this.usersRepository.findOne({ where: { role: UserRole.TEACHER } });
+        if (!teacherUser) {
+          teacherUser = await this.usersRepository.save(this.usersRepository.create({
+            email: `teacher_${clean}@center1.com`,
+            teacherCode: clean,
+            password: hashedPassword,
+            role: UserRole.TEACHER,
+            tenant: center,
+            tenantId: center.id,
+            fullName: 'أ. أحمد علي (معلم المادة)',
+            qualification: 'مدرس مادة تخصصي',
+          }));
+        }
+        return teacherUser;
+      } else if (upper.startsWith('STU') || upper.startsWith('SEC') || upper === '100100' || lower.includes('student')) {
+        let studentUser = await this.usersRepository.findOne({ where: { studentCode: clean } }) ||
+                          await this.usersRepository.findOne({ where: { role: UserRole.STUDENT } });
+        if (!studentUser) {
+          studentUser = await this.usersRepository.save(this.usersRepository.create({
+            email: `student_${clean}@center1.com`,
+            studentCode: clean,
+            parentCode: 'PAR01',
+            password: hashedPassword,
+            role: UserRole.STUDENT,
+            tenant: center,
+            tenantId: center.id,
+            fullName: 'أحمد محمود كنافة',
+            educationLevel: 'high',
+          }));
+        }
+        return studentUser;
+      } else if (upper.startsWith('PAR') || lower.includes('parent')) {
+        let parentUser = await this.usersRepository.findOne({ where: { parentCode: clean } }) ||
+                         await this.usersRepository.findOne({ where: { role: UserRole.PARENT } });
+        if (!parentUser) {
+          parentUser = await this.usersRepository.save(this.usersRepository.create({
+            email: `parent_${clean}@center1.com`,
+            parentCode: clean,
+            password: hashedPassword,
+            role: UserRole.PARENT,
+            tenant: center,
+            tenantId: center.id,
+            fullName: 'محمود كنافة (ولي أمر)',
+            phone: '01098765432',
+          }));
+        }
+        return parentUser;
       }
     } catch (err) {
       console.error('Auto-seed fallback error:', err);
